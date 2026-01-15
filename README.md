@@ -1,3 +1,3 @@
-[点这里](grade_distributor.html)  
+[点这里访问](grade_distributor.html)  
 
-下载html 直接双击打开。
+也下载html后 直接双击打开。
