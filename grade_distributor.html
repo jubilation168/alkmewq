@@ -335,12 +335,13 @@
         }
         
         .grading-table th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: #f5f5f5;
+            color: #333;
             padding: 12px 10px;
             text-align: center;
             font-weight: 600;
             font-size: 0.9em;
+            border-bottom: 2px solid #e0e0e0;
         }
         
         .grading-table td {
@@ -513,7 +514,18 @@
                         <input type="number" id="numDimensions" min="1" max="10" value="4" onchange="initGrading()">
                     </div>
                 </div>
-                
+
+                <div class="input-group">
+                    <div class="input-field" style="flex: 1 1 100%;">
+                        <label>维度权重（%）</label>
+                        <div id="weightsContainer" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
+                        <div style="margin-top: 8px; font-size: 0.85em; color: #666;">
+                            总权重: <span id="totalWeight">100</span>%
+                            <span id="weightWarning" style="color: #f44336; margin-left: 10px; display: none;">⚠️ 权重总和应为100%</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="input-group">
                     <button class="btn btn-secondary" onclick="showImportModal()">导入人员名单</button>
                     <span class="import-status" id="importStatus">尚未导入</span>
@@ -559,29 +571,121 @@
             numDimensions: 4,
             peopleNames: [],
             grades: [],
-            distributions: []
+            distributions: [],
+            weights: []
         };
         
         function initGrading() {
             state.numPeople = parseInt(document.getElementById('numPeople').value) || 8;
             state.numDimensions = parseInt(document.getElementById('numDimensions').value) || 3;
-            
+
             state.peopleNames = state.peopleNames.slice(0, state.numPeople);
             while (state.peopleNames.length < state.numPeople) {
                 state.peopleNames.push(`人员${state.peopleNames.length + 1}`);
             }
-            
+
+            // 初始化权重：前3个维度各30%，第4个维度10%，其余平均分配
+            state.weights = state.weights.slice(0, state.numDimensions);
+            while (state.weights.length < state.numDimensions) {
+                const idx = state.weights.length;
+                if (idx < 3) {
+                    state.weights.push(30);
+                } else if (idx === 3) {
+                    state.weights.push(10);
+                } else {
+                    state.weights.push(0);
+                }
+            }
+
+            // 确保权重总和为100
+            normalizeWeights();
+
             state.grades = [];
             state.distributions = [];
-            
+
             for (let d = 0; d < state.numDimensions; d++) {
                 const dimGrades = Array(state.numPeople).fill('B');
                 state.grades.push(dimGrades);
                 state.distributions.push(calculateDistribution(dimGrades));
             }
-            
+
+            renderWeightInputs();
             renderGradingTable();
             updateRulesPanel();
+        }
+
+        // 标准化权重，使总和为100
+        function normalizeWeights() {
+            const total = state.weights.reduce((a, b) => a + b, 0);
+            if (total !== 100 && total > 0) {
+                // 按比例调整
+                const scale = 100 / total;
+                let newWeights = state.weights.map(w => Math.round(w * scale));
+                // 修正舍入误差
+                let newTotal = newWeights.reduce((a, b) => a + b, 0);
+                let diff = 100 - newTotal;
+                // 将差额加到最大权重的维度
+                if (diff !== 0) {
+                    const maxIdx = newWeights.indexOf(Math.max(...newWeights));
+                    newWeights[maxIdx] += diff;
+                }
+                state.weights = newWeights;
+            }
+        }
+
+        function renderWeightInputs() {
+            const container = document.getElementById('weightsContainer');
+            container.innerHTML = '';
+
+            for (let d = 0; d < state.numDimensions; d++) {
+                const wrapper = document.createElement('div');
+                wrapper.style.cssText = 'flex: 1; min-width: 80px;';
+
+                const label = document.createElement('label');
+                label.textContent = `维度${d + 1}`;
+                label.style.cssText = 'font-size: 0.85em; color: #666; margin-bottom: 4px;';
+
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.min = '0';
+                input.max = '100';
+                input.value = state.weights[d];
+                input.style.cssText = 'width: 100%; padding: 8px 10px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px;';
+                input.onchange = (e) => updateWeight(d, e.target.value);
+
+                wrapper.appendChild(label);
+                wrapper.appendChild(input);
+                container.appendChild(wrapper);
+            }
+
+            updateWeightDisplay();
+        }
+
+        function updateWeight(index, value) {
+            let weight = parseInt(value) || 0;
+            weight = Math.max(0, Math.min(100, weight));
+            state.weights[index] = weight;
+
+            // 自动标准化权重
+            normalizeWeights();
+
+            // 更新所有输入框的显示
+            renderWeightInputs();
+
+            // 重新渲染表格（总分可能变化）
+            renderGradingTable();
+        }
+
+        function updateWeightDisplay() {
+            const total = state.weights.reduce((a, b) => a + b, 0);
+            document.getElementById('totalWeight').textContent = total;
+
+            const warning = document.getElementById('weightWarning');
+            if (total !== 100) {
+                warning.style.display = 'inline';
+            } else {
+                warning.style.display = 'none';
+            }
         }
         
         function calculateDistribution(grades) {
@@ -621,7 +725,7 @@
                 html += `
                     <div class="dimension-section fade-in" style="animation-delay: ${d * 0.1}s">
                         <div class="dimension-header">
-                            <div class="dimension-title">维度${d + 1}</div>
+                            <div class="dimension-title">维度${d + 1} <span style="font-size: 0.85em; color: #999; font-weight: normal;">(${state.weights[d]}%)</span></div>
                             <div class="dimension-stats">
                                 ${GRADES.map(g => {
                                     const current = dist[g];
@@ -686,19 +790,22 @@
                 let details = [];
                 for (let d = 0; d < state.numDimensions; d++) {
                     const grade = state.grades[d][p];
-                    total += SCORES[grade];
+                    const weight = state.weights[d] / 100; // 转换为小数
+                    const weightedScore = SCORES[grade] * weight;
+                    total += weightedScore;
                     details.push(grade);
                 }
                 personTotals.push({ name: state.peopleNames[p], total, details });
             }
-            
+
             // 按总分排序
             const sortedTotals = [...personTotals].sort((a, b) => b.total - a.total);
-            
+
             const meanScore = personTotals.reduce((a, b) => a + b.total, 0) / state.numPeople;
             const variance = personTotals.reduce((sum, p) => sum + Math.pow(p.total - meanScore, 2), 0) / state.numPeople;
             const stdDev = Math.sqrt(variance);
-            const expectedScore = (0.2 * 5 + 0.4 * 4 + 0.3 * 3 + 0.1 * 2) * state.numDimensions;
+            // 理论期望分 = 各维度期望分 × 权重之和
+            const expectedScore = (0.2 * 5 + 0.4 * 4 + 0.3 * 3 + 0.1 * 2);
             
             // 生成个人得分表格
             let personTableRows = '';
@@ -736,7 +843,7 @@
                             </td>
                         `).join('')}
                         <td style="text-align: center; padding: 10px 8px;">
-                            <span style="display: inline-block; padding: 4px 12px; border-radius: 20px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-weight: 600; font-size: 0.95em;">${p.total}</span>
+                            <span style="display: inline-block; padding: 4px 12px; border-radius: 20px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-weight: 600; font-size: 0.95em;">${p.total.toFixed(2)}</span>
                         </td>
                         <td style="text-align: center; padding: 10px 8px;">
                             <span style="display: inline-block; padding: 4px 10px; border-radius: 12px; background: ${diffBg}; color: ${diffColor}; font-weight: 500; font-size: 0.85em;">${diffStr}</span>
@@ -750,7 +857,7 @@
                     <div class="overall-title">整体统计</div>
                     <div class="stats-grid">
                         <div class="stat-box">
-                            <div class="stat-value">${meanScore.toFixed(1)}</div>
+                            <div class="stat-value">${meanScore.toFixed(2)}</div>
                             <div class="stat-label">平均分</div>
                         </div>
                         <div class="stat-box">
@@ -758,19 +865,19 @@
                             <div class="stat-label">标准差</div>
                         </div>
                         <div class="stat-box">
-                            <div class="stat-value">${Math.max(...personTotals.map(p => p.total))}</div>
+                            <div class="stat-value">${Math.max(...personTotals.map(p => p.total)).toFixed(2)}</div>
                             <div class="stat-label">最高分</div>
                         </div>
                         <div class="stat-box">
-                            <div class="stat-value">${Math.min(...personTotals.map(p => p.total))}</div>
+                            <div class="stat-value">${Math.min(...personTotals.map(p => p.total)).toFixed(2)}</div>
                             <div class="stat-label">最低分</div>
                         </div>
                         <div class="stat-box">
-                            <div class="stat-value">${Math.max(...personTotals.map(p => p.total)) - Math.min(...personTotals.map(p => p.total))}</div>
+                            <div class="stat-value">${(Math.max(...personTotals.map(p => p.total)) - Math.min(...personTotals.map(p => p.total))).toFixed(2)}</div>
                             <div class="stat-label">分差</div>
                         </div>
                         <div class="stat-box">
-                            <div class="stat-value">${expectedScore.toFixed(1)}</div>
+                            <div class="stat-value">${expectedScore.toFixed(2)}</div>
                             <div class="stat-label">理论期望</div>
                         </div>
                     </div>
@@ -912,17 +1019,18 @@
         function autoBalance() {
             const expected = getExpectedCount();
             const numDims = state.numDimensions;
-            
-            // 目标总分
-            const targetScore = (0.2 * 5 + 0.4 * 4 + 0.3 * 3 + 0.1 * 2) * numDims;
-            
-            // 计算当前方差
+            const weights = state.weights.map(w => w / 100); // 转换为小数
+
+            // 目标总分（考虑权重后，期望分就是3.5）
+            const targetScore = (0.2 * 5 + 0.4 * 4 + 0.3 * 3 + 0.1 * 2);
+
+            // 计算当前方差（使用加权分数）
             function calculateVariance() {
                 const totals = [];
                 for (let p = 0; p < state.numPeople; p++) {
                     let total = 0;
                     for (let d = 0; d < numDims; d++) {
-                        total += SCORES[state.grades[d][p]];
+                        total += SCORES[state.grades[d][p]] * weights[d];
                     }
                     totals.push(total);
                 }
@@ -930,36 +1038,37 @@
                 const variance = totals.reduce((sum, t) => sum + Math.pow(t - mean, 2), 0) / totals.length;
                 return { variance, totals, mean };
             }
-            
+
             // 贪心初始分配
             function greedyAssign() {
                 const personScores = Array(state.numPeople).fill(0);
                 const result = [];
-                
+
                 for (let d = 0; d < numDims; d++) {
                     const dimAssignment = Array(state.numPeople).fill('');
                     const available = { ...expected };
-                    
+                    const weight = weights[d];
+
                     // 按当前总分排序，低分优先
                     const order = Array.from({ length: state.numPeople }, (_, i) => i)
                         .sort((a, b) => personScores[a] - personScores[b]);
-                    
+
                     for (const personIdx of order) {
                         const currentScore = personScores[personIdx];
-                        
+
                         // 计算理想目标（接近均值）
                         const otherScores = personScores.filter((_, i) => i !== personIdx);
-                        const targetAvg = otherScores.length > 0 
-                            ? otherScores.reduce((a, b) => a + b, 0) / otherScores.length 
+                        const targetAvg = otherScores.length > 0
+                            ? otherScores.reduce((a, b) => a + b, 0) / otherScores.length
                             : targetScore;
-                        
+
                         let bestGrade = null;
                         let bestDiff = Infinity;
-                        
+
                         // 按分数降序尝试（优先高分）
                         for (const grade of ['A', 'B', 'C', 'D']) {
                             if (available[grade] > 0) {
-                                const newScore = currentScore + SCORES[grade];
+                                const newScore = currentScore + SCORES[grade] * weight;
                                 const diff = Math.abs(newScore - targetAvg);
                                 if (diff < bestDiff) {
                                     bestDiff = diff;
@@ -967,18 +1076,18 @@
                                 }
                             }
                         }
-                        
+
                         if (bestGrade) {
                             dimAssignment[personIdx] = bestGrade;
                             available[bestGrade]--;
-                            personScores[personIdx] += SCORES[bestGrade];
+                            personScores[personIdx] += SCORES[bestGrade] * weight;
                         }
                     }
                     result.push(dimAssignment);
                 }
                 return { assignments: result, scores: personScores };
             }
-            
+
             // 局部优化：尝试交换位置来改善方差
             function localOptimization(iterations = 1000) {
                 for (let iter = 0; iter < iterations; iter++) {
@@ -987,20 +1096,20 @@
                     // 随机选择两个人
                     const p1 = Math.floor(Math.random() * state.numPeople);
                     const p2 = Math.floor(Math.random() * state.numPeople);
-                    
+
                     if (p1 === p2) continue;
-                    
+
                     // 尝试交换
                     const g1 = state.grades[d][p1];
                     const g2 = state.grades[d][p2];
-                    
+
                     // 计算交换前后的总分
                     const beforeSwap = calculateVariance();
-                    
+
                     // 交换
                     state.grades[d][p1] = g2;
                     state.grades[d][p2] = g1;
-                    
+
                     // 检查分布是否还符合规则
                     const newDist = calculateDistribution(state.grades[d]);
                     let valid = true;
@@ -1010,7 +1119,7 @@
                             break;
                         }
                     }
-                    
+
                     if (valid) {
                         const afterSwap = calculateVariance();
                         // 如果方差变大，恢复
@@ -1025,39 +1134,39 @@
                     }
                 }
             }
-            
+
             // 多次尝试，选择最优
             let bestResult = null;
             let bestVariance = Infinity;
             const numTries = 100; // 尝试100次
-            
+
             for (let tryIdx = 0; tryIdx < numTries; tryIdx++) {
                 // 贪心分配
                 const greedy = greedyAssign();
                 state.grades = greedy.assignments;
-                
+
                 // 局部优化
                 localOptimization(500);
-                
+
                 // 计算方差
                 const evalResult = calculateVariance();
-                
+
                 if (evalResult.variance < bestVariance) {
                     bestVariance = evalResult.variance;
                     bestResult = JSON.parse(JSON.stringify(state.grades));
                 }
             }
-            
+
             // 应用最优结果
             if (bestResult) {
                 state.grades = bestResult;
             }
-            
+
             // 更新分布
             for (let d = 0; d < numDims; d++) {
                 state.distributions[d] = calculateDistribution(state.grades[d]);
             }
-            
+
             renderGradingTable();
             updateRulesPanel();
         }
@@ -1065,31 +1174,40 @@
         function saveResults() {
             let result = '360评测结果\n';
             result += '='.repeat(50) + '\n\n';
-            
+
+            result += '【维度权重】\n';
             for (let d = 0; d < state.numDimensions; d++) {
-                result += `【维度${d + 1}】\n`;
+                result += `  维度${d + 1}: ${state.weights[d]}%\n`;
+            }
+            result += '\n';
+
+            for (let d = 0; d < state.numDimensions; d++) {
+                result += `【维度${d + 1} (权重${state.weights[d]}%)】\n`;
                 for (let p = 0; p < state.numPeople; p++) {
                     const grade = state.grades[d][p];
-                    result += `  ${state.peopleNames[p]}: ${grade} (${SCORES[grade]}分)\n`;
+                    const weight = state.weights[d] / 100;
+                    const weightedScore = (SCORES[grade] * weight).toFixed(2);
+                    result += `  ${state.peopleNames[p]}: ${grade} (${SCORES[grade]}分 × ${state.weights[d]}% = ${weightedScore}分)\n`;
                 }
                 result += '\n';
             }
-            
+
             const personTotals = [];
             for (let p = 0; p < state.numPeople; p++) {
                 let total = 0;
                 for (let d = 0; d < state.numDimensions; d++) {
-                    total += SCORES[state.grades[d][p]];
+                    const weight = state.weights[d] / 100;
+                    total += SCORES[state.grades[d][p]] * weight;
                 }
                 personTotals.push({ name: state.peopleNames[p], total });
             }
-            
+
             result += '【总分排名】\n';
             personTotals.sort((a, b) => b.total - a.total);
             personTotals.forEach((p, i) => {
-                result += `  ${i + 1}. ${p.name}: ${p.total}分\n`;
+                result += `  ${i + 1}. ${p.name}: ${p.total.toFixed(2)}分\n`;
             });
-            
+
             const blob = new Blob([result], { type: 'text/plain;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -1097,7 +1215,7 @@
             a.download = '360评测结果.txt';
             a.click();
             URL.revokeObjectURL(url);
-            
+
             alert('结果已保存！');
         }
         
