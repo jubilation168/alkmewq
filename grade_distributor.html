@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>360评测系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #fff;
+            font-size: 2em;
+            margin-bottom: 25px;
+            font-weight: 600;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* 悬浮规则面板 */
+        .rules-panel {
+            position: sticky;
+            left: 20px;
+            top: 20px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            width: 280px;
+            flex-shrink: 0;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+        
+        .rules-title {
+            font-size: 1em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .dimension-rules {
+            margin-bottom: 18px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed #e0e0e0;
+        }
+        
+        .dimension-rules:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .dimension-name {
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+        
+        .grade-rule-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            gap: 8px;
+        }
+        
+        .grade-label {
+            width: 22px;
+            height: 22px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.8em;
+            color: white;
+            flex-shrink: 0;
+        }
+        
+        .grade-a { background: #999; }
+        .grade-b { background: #999; }
+        .grade-c { background: #999; color: #333; }
+        .grade-d { background: #999; }
+        
+        .rule-progress {
+            flex: 1;
+            height: 18px;
+            background: #f5f5f5;
+            border-radius: 9px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .rule-fill {
+            height: 100%;
+            border-radius: 9px;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7em;
+            font-weight: 600;
+            color: white;
+            min-width: 18px;
+        }
+        
+        .fill-normal { background: #667eea; }
+        .fill-warning { background: #ff9800; }
+        .fill-error { background: #f44336; }
+        
+        .rule-target {
+            font-size: 0.8em;
+            color: #999;
+            width: 35px;
+            text-align: right;
+        }
+        
+        .rule-status {
+            width: 20px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+        
+        .status-ok { color: #4caf50; }
+        .status-warn { color: #ff9800; }
+        .status-error { color: #f44336; font-weight: bold; }
+        
+        .rule-error-msg {
+            font-size: 0.75em;
+            color: #f44336;
+            font-weight: 600;
+            margin-left: 30px;
+            margin-top: -4px;
+            margin-bottom: 6px;
+        }
+        
+        /* 主内容区 */
+        .main-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 25px;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+        }
+        
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+            font-size: 1.1em;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        
+        .input-field {
+            flex: 1;
+            min-width: 180px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        input[type="number"] {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #666;
+        }
+        
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        .import-status {
+            font-size: 0.85em;
+            color: #666;
+        }
+        
+        /* 规则说明 */
+        .rules-info {
+            margin-top: 15px;
+            padding: 12px 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 0.85em;
+            color: #666;
+        }
+        
+        .rules-info h4 {
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 0.9em;
+        }
+        
+        .rules-info ul {
+            margin-left: 15px;
+        }
+        
+        .rules-info li {
+            margin-bottom: 3px;
+        }
+        
+        /* 评分表格区域 */
+        .grading-area {
+            margin-top: 20px;
+        }
+        
+        .dimension-section {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+        
+        .dimension-section:hover {
+            transform: translateY(-2px);
+        }
+        
+        .dimension-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .dimension-title {
+            font-size: 1.05em;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .dimension-stats {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .dim-stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85em;
+            color: #666;
+            background: #f5f5f5;
+            padding: 4px 10px;
+            border-radius: 15px;
+        }
+        
+        .grading-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .grading-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 10px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        
+        .grading-table td {
+            padding: 8px;
+            text-align: center;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .grading-table tr:hover {
+            background: #fafafa;
+        }
+        
+        /* 人员名称输入 */
+        .name-input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            font-size: 0.9em;
+            font-weight: 500;
+            color: #333;
+            padding: 4px 6px;
+            border-radius: 4px;
+        }
+        
+        .name-input:focus {
+            outline: none;
+            background: #f0f0f0;
+        }
+        
+        /* 单选按钮样式 - 简洁版 */
+        .grade-options {
+            display: flex;
+            gap: 3px;
+            justify-content: center;
+        }
+        
+        .grade-option {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+            color: #999;
+        }
+        
+        .grade-option:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+        
+        .grade-option.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+        
+        /* 整体统计 */
+        .overall-stats {
+            margin-top: 25px;
+            padding: 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            color: white;
+        }
+        
+        .overall-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+        }
+        
+        .stat-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: 700;
+        }
+        
+        .stat-label {
+            font-size: 0.85em;
+            opacity: 0.9;
+            margin-top: 3px;
+        }
+        
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: #999;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.4s ease forwards;
+        }
+        
+        /* 移动端 */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .rules-panel {
+                position: relative;
+                left: 0;
+                top: 0;
+                width: 100%;
+                max-height: none;
+            }
+            
+            .main-content {
+                width: 100%;
+            }
+            
+            .grade-option {
+                width: 28px;
+                height: 28px;
+                font-size: 0.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>360评测系统</h1>
+    
+    <div class="container">
+        <!-- 悬浮规则面板 -->
+        <div class="rules-panel" id="rulesPanel">
+            <div class="rules-title">规则监控</div>
+            <div id="rulesContent">
+                <p style="color: #999; text-align: center; padding: 20px; font-size: 0.9em;">请设置参数后初始化</p>
+            </div>
+        </div>
+        
+        <!-- 主要内容区 -->
+        <div class="main-content">
+            <div class="card">
+                <h2>参数设置</h2>
+                <div class="input-group">
+                    <div class="input-field">
+                        <label>评测人数</label>
+                        <input type="number" id="numPeople" min="1" max="50" value="8" onchange="initGrading()">
+                    </div>
+                    <div class="input-field">
+                        <label>评测维度</label>
+                        <input type="number" id="numDimensions" min="1" max="10" value="4" onchange="initGrading()">
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <button class="btn btn-secondary" onclick="showImportModal()">导入人员名单</button>
+                    <span class="import-status" id="importStatus">尚未导入</span>
+                </div>
+                
+                <div class="rules-info">
+                    <h4>评分规则</h4>
+                    <ul>
+                        <li><strong>A (5分)</strong> - 20%</li>
+                        <li><strong>B (4分)</strong> - 40%</li>
+                        <li><strong>C (3分)</strong> - 30%</li>
+                        <li><strong>D (2分)</strong> - 10%</li>
+                    </ul>
+                    <p style="margin-top: 8px; color: #999;">点击选项切换评分，点击姓名可编辑</p>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="randomizeAll()">随机填充</button>
+                    <button class="btn btn-primary" onclick="autoBalance()">自动均衡</button>
+                    <button class="btn btn-success" onclick="saveResults()">保存结果</button>
+                </div>
+            </div>
+            
+            <!-- 评分区域 -->
+            <div class="grading-area" id="gradingArea">
+                <div class="card" id="emptyState">
+                    <div class="empty-state">
+                        <p>设置参数后自动生成评测表格</p>
+                    </div>
+                </div>
+                <div id="gradingContent" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const GRADES = ['A', 'B', 'C', 'D'];
+        const SCORES = { 'A': 5, 'B': 4, 'C': 3, 'D': 2 };
+        const DISTRIBUTION = { 'A': 0.2, 'B': 0.4, 'C': 0.3, 'D': 0.1 };
+        
+        let state = {
+            numPeople: 8,
+            numDimensions: 4,
+            peopleNames: [],
+            grades: [],
+            distributions: []
+        };
+        
+        function initGrading() {
+            state.numPeople = parseInt(document.getElementById('numPeople').value) || 8;
+            state.numDimensions = parseInt(document.getElementById('numDimensions').value) || 3;
+            
+            state.peopleNames = state.peopleNames.slice(0, state.numPeople);
+            while (state.peopleNames.length < state.numPeople) {
+                state.peopleNames.push(`人员${state.peopleNames.length + 1}`);
+            }
+            
+            state.grades = [];
+            state.distributions = [];
+            
+            for (let d = 0; d < state.numDimensions; d++) {
+                const dimGrades = Array(state.numPeople).fill('B');
+                state.grades.push(dimGrades);
+                state.distributions.push(calculateDistribution(dimGrades));
+            }
+            
+            renderGradingTable();
+            updateRulesPanel();
+        }
+        
+        function calculateDistribution(grades) {
+            const dist = { A: 0, B: 0, C: 0, D: 0 };
+            grades.forEach(g => dist[g]++);
+            return dist;
+        }
+        
+        function getExpectedCount() {
+            const n = state.numPeople;
+            const expected = {
+                A: Math.round(n * DISTRIBUTION.A),
+                B: Math.round(n * DISTRIBUTION.B),
+                C: Math.round(n * DISTRIBUTION.C),
+                D: Math.round(n * DISTRIBUTION.D)
+            };
+            
+            const total = expected.A + expected.B + expected.C + expected.D;
+            if (total !== n) {
+                expected.B += n - total;
+            }
+            return expected;
+        }
+        
+        function renderGradingTable() {
+            const container = document.getElementById('gradingContent');
+            document.getElementById('emptyState').style.display = 'none';
+            container.style.display = 'block';
+            
+            let html = '';
+            
+            for (let d = 0; d < state.numDimensions; d++) {
+                const dimGrades = state.grades[d];
+                const dist = state.distributions[d];
+                const expected = getExpectedCount();
+                
+                html += `
+                    <div class="dimension-section fade-in" style="animation-delay: ${d * 0.1}s">
+                        <div class="dimension-header">
+                            <div class="dimension-title">维度${d + 1}</div>
+                            <div class="dimension-stats">
+                                ${GRADES.map(g => {
+                                    const current = dist[g];
+                                    const target = expected[g];
+                                    const diff = current - target;
+                                    let color = '#999';
+                                    if (diff > 0) color = '#f44336';
+                                    else if (diff < 0) color = '#ff9800';
+                                    else color = '#4caf50';
+                                    return `<div class="dim-stat" style="color: ${color}">${g}: ${current}/${target}</div>`;
+                                }).join('')}
+                            </div>
+                        </div>
+                        <table class="grading-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 140px;">姓名</th>
+                                    ${GRADES.map(g => `<th>${g}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                for (let p = 0; p < state.numPeople; p++) {
+                    const currentGrade = dimGrades[p];
+                    html += `
+                        <tr>
+                            <td>
+                                <input type="text" class="name-input" 
+                                       data-index="${p}"
+                                       value="${state.peopleNames[p]}" 
+                                       oninput="updateName(${p}, this.value)"
+                                       placeholder="输入姓名">
+                            </td>
+                            ${GRADES.map(g => `
+                                <td>
+                                    <div class="grade-options">
+                                        <div class="grade-option ${g === currentGrade ? 'selected' : ''}" 
+                                             onclick="changeGrade(${d}, ${p}, '${g}')">${g}</div>
+                                    </div>
+                                </td>
+                            `).join('')}
+                        </tr>
+                    `;
+                }
+                
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            
+            html += renderOverallStats();
+            container.innerHTML = html;
+        }
+        
+        function renderOverallStats() {
+            const personTotals = [];
+            for (let p = 0; p < state.numPeople; p++) {
+                let total = 0;
+                let details = [];
+                for (let d = 0; d < state.numDimensions; d++) {
+                    const grade = state.grades[d][p];
+                    total += SCORES[grade];
+                    details.push(grade);
+                }
+                personTotals.push({ name: state.peopleNames[p], total, details });
+            }
+            
+            // 按总分排序
+            const sortedTotals = [...personTotals].sort((a, b) => b.total - a.total);
+            
+            const meanScore = personTotals.reduce((a, b) => a + b.total, 0) / state.numPeople;
+            const variance = personTotals.reduce((sum, p) => sum + Math.pow(p.total - meanScore, 2), 0) / state.numPeople;
+            const stdDev = Math.sqrt(variance);
+            const expectedScore = (0.2 * 5 + 0.4 * 4 + 0.3 * 3 + 0.1 * 2) * state.numDimensions;
+            
+            // 生成个人得分表格
+            let personTableRows = '';
+            personTotals.forEach((p, idx) => {
+                const rank = sortedTotals.findIndex(t => t.name === p.name) + 1;
+                const diff = p.total - expectedScore;
+                const diffStr = diff >= 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1);
+                
+                // 排名颜色
+                const rankColors = ['#FFD700', '#C0C0C0', '#CD7F32', '#667eea'];
+                const rankBgColors = ['rgba(255, 215, 0, 0.15)', 'rgba(192, 192, 192, 0.15)', 'rgba(205, 127, 50, 0.15)', 'rgba(102, 126, 234, 0.08)'];
+                const rankColor = rank <= 3 ? rankColors[rank - 1] : '#666';
+                const rankBg = rank <= 3 ? rankBgColors[rank - 1] : 'transparent';
+                
+                // 偏差颜色
+                let diffColor = '#28a745';
+                let diffBg = 'rgba(40, 167, 69, 0.1)';
+                if (diff < 0) {
+                    diffColor = '#f44336';
+                    diffBg = 'rgba(244, 67, 54, 0.1)';
+                } else if (diff === 0) {
+                    diffColor = '#999';
+                    diffBg = 'rgba(153, 153, 153, 0.1)';
+                }
+                
+                personTableRows += `
+                    <tr style="transition: background 0.2s;">
+                        <td style="text-align: center; padding: 10px 8px;">
+                            <span style="display: inline-block; width: 24px; height: 24px; line-height: 24px; border-radius: 50%; background: ${rankBg}; color: ${rankColor}; font-weight: 600; font-size: 0.85em;">${rank}</span>
+                        </td>
+                        <td style="text-align: left; padding: 10px 8px; font-weight: 500; color: #333;">${p.name}</td>
+                        ${p.details.map(d => `
+                            <td style="text-align: center; padding: 8px;">
+                                <span style="display: inline-block; min-width: 28px; height: 28px; line-height: 28px; border-radius: 6px; background: #f5f5f5; color: #666; font-weight: 600; font-size: 0.9em;">${d}</span>
+                            </td>
+                        `).join('')}
+                        <td style="text-align: center; padding: 10px 8px;">
+                            <span style="display: inline-block; padding: 4px 12px; border-radius: 20px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-weight: 600; font-size: 0.95em;">${p.total}</span>
+                        </td>
+                        <td style="text-align: center; padding: 10px 8px;">
+                            <span style="display: inline-block; padding: 4px 10px; border-radius: 12px; background: ${diffBg}; color: ${diffColor}; font-weight: 500; font-size: 0.85em;">${diffStr}</span>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            return `
+                <div class="overall-stats">
+                    <div class="overall-title">整体统计</div>
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-value">${meanScore.toFixed(1)}</div>
+                            <div class="stat-label">平均分</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${stdDev.toFixed(2)}</div>
+                            <div class="stat-label">标准差</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${Math.max(...personTotals.map(p => p.total))}</div>
+                            <div class="stat-label">最高分</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${Math.min(...personTotals.map(p => p.total))}</div>
+                            <div class="stat-label">最低分</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${Math.max(...personTotals.map(p => p.total)) - Math.min(...personTotals.map(p => p.total))}</div>
+                            <div class="stat-label">分差</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${expectedScore.toFixed(1)}</div>
+                            <div class="stat-label">理论期望</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 25px;">
+                        <div style="font-size: 1em; font-weight: 600; margin-bottom: 15px; color: #333;">个人得分表</div>
+                        <table class="grading-table" style="font-size: 0.9em;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 60px; padding: 12px 8px;">排名</th>
+                                    <th style="width: 120px; padding: 12px 8px;">姓名</th>
+                                    ${Array.from({length: state.numDimensions}, (_, i) => `<th style="padding: 12px 8px;">维度${i + 1}</th>`).join('')}
+                                    <th style="width: 70px; padding: 12px 8px;">总分</th>
+                                    <th style="width: 70px; padding: 12px 8px;">偏差</th>
+                                </tr>
+                            </thead>
+                            <tbody style="background: white; border-radius: 8px; overflow: hidden;">
+                                ${personTableRows}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function changeGrade(dim, person, grade) {
+            state.grades[dim][person] = grade;
+            state.distributions[dim] = calculateDistribution(state.grades[dim]);
+            renderGradingTable();
+            updateRulesPanel();
+        }
+        
+        function updateName(index, name) {
+            const newName = name.trim() || `人员${index + 1}`;
+            state.peopleNames[index] = newName;
+            // 实时更新所有同名人名的输入框
+            document.querySelectorAll(`.name-input[data-index="${index}"]`).forEach(input => {
+                input.value = newName;
+            });
+        }
+        
+        function updateRulesPanel() {
+            const container = document.getElementById('rulesContent');
+            const expected = getExpectedCount();
+            
+            let html = '';
+            let hasError = false;
+            
+            for (let d = 0; d < state.numDimensions; d++) {
+                const dist = state.distributions[d];
+                
+                html += `<div class="dimension-rules"><div class="dimension-name">维度${d + 1}</div>`;
+                
+                for (const grade of GRADES) {
+                    const current = dist[grade];
+                    const target = expected[grade];
+                    const diff = current - target;
+                    const percent = target > 0 ? (current / target * 100) : 0;
+                    
+                    let fillClass = 'fill-normal';
+                    let statusIcon = '✓';
+                    let statusClass = 'status-ok';
+                    let errorMsg = '';
+                    
+                    if (diff === 0) {
+                        statusIcon = '✓';
+                        statusClass = 'status-ok';
+                    } else if (diff > 0) {
+                        if (diff >= 2) {
+                            fillClass = 'fill-error';
+                            statusIcon = '✗';
+                            statusClass = 'status-error';
+                            errorMsg = `<div class="rule-error-msg">超出 ${diff} 人！</div>`;
+                            hasError = true;
+                        } else {
+                            fillClass = 'fill-warning';
+                            statusIcon = '!';
+                            statusClass = 'status-warn';
+                        }
+                    } else {
+                        const remaining = -diff;
+                        if (remaining >= 2) {
+                            fillClass = 'fill-warning';
+                            statusIcon = '...';
+                        } else {
+                            fillClass = 'fill-normal';
+                            statusIcon = '...';
+                        }
+                    }
+                    
+                    html += `
+                        <div class="grade-rule-row">
+                            <span class="grade-label grade-${grade.toLowerCase()}">${grade}</span>
+                            <div class="rule-progress">
+                                <div class="rule-fill ${fillClass}" style="width: ${Math.min(100, percent)}%">
+                                    ${current}
+                                </div>
+                            </div>
+                            <span class="rule-target">/${target}</span>
+                            <span class="rule-status ${statusClass}">${statusIcon}</span>
+                        </div>
+                        ${errorMsg}
+                    `;
+                }
+                
+                html += `</div>`;
+            }
+            
+            // 底部汇总错误提示
+            if (hasError) {
+                html = `<div style="background: #ffebee; color: #c62828; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85em; font-weight: 500;">⚠️ 存在超出规则的项目，请调整</div>` + html;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        function randomizeAll() {
+            const expected = getExpectedCount();
+            
+            for (let d = 0; d < state.numDimensions; d++) {
+                let pool = [];
+                GRADES.forEach(g => {
+                    pool.push(...Array(expected[g]).fill(g));
+                });
+                
+                for (let i = pool.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [pool[i], pool[j]] = [pool[j], pool[i]];
+                }
+                
+                state.grades[d] = [...pool];
+                state.distributions[d] = calculateDistribution(pool);
+            }
+            
+            renderGradingTable();
+            updateRulesPanel();
+        }
+        
+        function autoBalance() {
+            const expected = getExpectedCount();
+            const numDims = state.numDimensions;
+            
+            // 目标总分
+            const targetScore = (0.2 * 5 + 0.4 * 4 + 0.3 * 3 + 0.1 * 2) * numDims;
+            
+            // 计算当前方差
+            function calculateVariance() {
+                const totals = [];
+                for (let p = 0; p < state.numPeople; p++) {
+                    let total = 0;
+                    for (let d = 0; d < numDims; d++) {
+                        total += SCORES[state.grades[d][p]];
+                    }
+                    totals.push(total);
+                }
+                const mean = totals.reduce((a, b) => a + b, 0) / totals.length;
+                const variance = totals.reduce((sum, t) => sum + Math.pow(t - mean, 2), 0) / totals.length;
+                return { variance, totals, mean };
+            }
+            
+            // 贪心初始分配
+            function greedyAssign() {
+                const personScores = Array(state.numPeople).fill(0);
+                const result = [];
+                
+                for (let d = 0; d < numDims; d++) {
+                    const dimAssignment = Array(state.numPeople).fill('');
+                    const available = { ...expected };
+                    
+                    // 按当前总分排序，低分优先
+                    const order = Array.from({ length: state.numPeople }, (_, i) => i)
+                        .sort((a, b) => personScores[a] - personScores[b]);
+                    
+                    for (const personIdx of order) {
+                        const currentScore = personScores[personIdx];
+                        
+                        // 计算理想目标（接近均值）
+                        const otherScores = personScores.filter((_, i) => i !== personIdx);
+                        const targetAvg = otherScores.length > 0 
+                            ? otherScores.reduce((a, b) => a + b, 0) / otherScores.length 
+                            : targetScore;
+                        
+                        let bestGrade = null;
+                        let bestDiff = Infinity;
+                        
+                        // 按分数降序尝试（优先高分）
+                        for (const grade of ['A', 'B', 'C', 'D']) {
+                            if (available[grade] > 0) {
+                                const newScore = currentScore + SCORES[grade];
+                                const diff = Math.abs(newScore - targetAvg);
+                                if (diff < bestDiff) {
+                                    bestDiff = diff;
+                                    bestGrade = grade;
+                                }
+                            }
+                        }
+                        
+                        if (bestGrade) {
+                            dimAssignment[personIdx] = bestGrade;
+                            available[bestGrade]--;
+                            personScores[personIdx] += SCORES[bestGrade];
+                        }
+                    }
+                    result.push(dimAssignment);
+                }
+                return { assignments: result, scores: personScores };
+            }
+            
+            // 局部优化：尝试交换位置来改善方差
+            function localOptimization(iterations = 1000) {
+                for (let iter = 0; iter < iterations; iter++) {
+                    // 随机选择一个维度
+                    const d = Math.floor(Math.random() * numDims);
+                    // 随机选择两个人
+                    const p1 = Math.floor(Math.random() * state.numPeople);
+                    const p2 = Math.floor(Math.random() * state.numPeople);
+                    
+                    if (p1 === p2) continue;
+                    
+                    // 尝试交换
+                    const g1 = state.grades[d][p1];
+                    const g2 = state.grades[d][p2];
+                    
+                    // 计算交换前后的总分
+                    const beforeSwap = calculateVariance();
+                    
+                    // 交换
+                    state.grades[d][p1] = g2;
+                    state.grades[d][p2] = g1;
+                    
+                    // 检查分布是否还符合规则
+                    const newDist = calculateDistribution(state.grades[d]);
+                    let valid = true;
+                    for (const grade of GRADES) {
+                        if (newDist[grade] !== expected[grade]) {
+                            valid = false;
+                            break;
+                        }
+                    }
+                    
+                    if (valid) {
+                        const afterSwap = calculateVariance();
+                        // 如果方差变大，恢复
+                        if (afterSwap.variance > beforeSwap.variance) {
+                            state.grades[d][p1] = g1;
+                            state.grades[d][p2] = g2;
+                        }
+                    } else {
+                        // 分布不符，恢复
+                        state.grades[d][p1] = g1;
+                        state.grades[d][p2] = g2;
+                    }
+                }
+            }
+            
+            // 多次尝试，选择最优
+            let bestResult = null;
+            let bestVariance = Infinity;
+            const numTries = 100; // 尝试100次
+            
+            for (let tryIdx = 0; tryIdx < numTries; tryIdx++) {
+                // 贪心分配
+                const greedy = greedyAssign();
+                state.grades = greedy.assignments;
+                
+                // 局部优化
+                localOptimization(500);
+                
+                // 计算方差
+                const evalResult = calculateVariance();
+                
+                if (evalResult.variance < bestVariance) {
+                    bestVariance = evalResult.variance;
+                    bestResult = JSON.parse(JSON.stringify(state.grades));
+                }
+            }
+            
+            // 应用最优结果
+            if (bestResult) {
+                state.grades = bestResult;
+            }
+            
+            // 更新分布
+            for (let d = 0; d < numDims; d++) {
+                state.distributions[d] = calculateDistribution(state.grades[d]);
+            }
+            
+            renderGradingTable();
+            updateRulesPanel();
+        }
+        
+        function saveResults() {
+            let result = '360评测结果\n';
+            result += '='.repeat(50) + '\n\n';
+            
+            for (let d = 0; d < state.numDimensions; d++) {
+                result += `【维度${d + 1}】\n`;
+                for (let p = 0; p < state.numPeople; p++) {
+                    const grade = state.grades[d][p];
+                    result += `  ${state.peopleNames[p]}: ${grade} (${SCORES[grade]}分)\n`;
+                }
+                result += '\n';
+            }
+            
+            const personTotals = [];
+            for (let p = 0; p < state.numPeople; p++) {
+                let total = 0;
+                for (let d = 0; d < state.numDimensions; d++) {
+                    total += SCORES[state.grades[d][p]];
+                }
+                personTotals.push({ name: state.peopleNames[p], total });
+            }
+            
+            result += '【总分排名】\n';
+            personTotals.sort((a, b) => b.total - a.total);
+            personTotals.forEach((p, i) => {
+                result += `  ${i + 1}. ${p.name}: ${p.total}分\n`;
+            });
+            
+            const blob = new Blob([result], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = '360评测结果.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            alert('结果已保存！');
+        }
+        
+        // 导入功能
+        function showImportModal() {
+            document.getElementById('importModal').style.display = 'flex';
+            document.getElementById('importTextarea').focus();
+        }
+        
+        function hideImportModal() {
+            document.getElementById('importModal').style.display = 'none';
+            document.getElementById('importTextarea').value = '';
+        }
+        
+        function parseNames() {
+            const text = document.getElementById('importTextarea').value;
+            const lines = text.split(/[\n\r]+/).map(line => line.trim()).filter(line => line);
+            
+            if (lines.length === 0) {
+                alert('请输入人员姓名');
+                return;
+            }
+            
+            document.getElementById('numPeople').value = lines.length;
+            state.peopleNames = lines.slice(0, 50);
+            
+            document.getElementById('importStatus').innerHTML = 
+                `<span style="color: #4caf50;">已导入 ${lines.length} 人</span>`;
+            
+            hideImportModal();
+            initGrading();
+        }
+        
+        function loadFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const lines = text.split(/[\n\r]+/).map(line => line.trim()).filter(line => line);
+                
+                if (lines.length === 0) {
+                    alert('文件中没有找到人员姓名');
+                    return;
+                }
+                
+                if (lines[0].includes('姓名') || lines[0].includes('名称')) {
+                    lines.shift();
+                }
+                
+                document.getElementById('numPeople').value = lines.length;
+                state.peopleNames = lines.slice(0, 50);
+                
+                document.getElementById('importStatus').innerHTML = 
+                    `<span style="color: #4caf50;">已导入 ${lines.length} 人</span>`;
+                
+                initGrading();
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+        
+        window.onload = initGrading;
+    </script>
+    
+    <!-- 导入弹窗 -->
+    <div id="importModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 16px; padding: 25px; width: 90%; max-width: 450px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <h3 style="margin-bottom: 15px; color: #333; font-size: 1.1em;">导入人员名单</h3>
+            
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 6px; color: #666; font-size: 0.9em;">方式一：粘贴姓名（每行一个）</label>
+                <textarea id="importTextarea" style="width: 100%; height: 120px; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; resize: vertical;" placeholder="张三&#10;李四&#10;王五&#10;..."></textarea>
+            </div>
+            
+            <div style="text-align: center; color: #ccc; margin: 10px 0;">— 或 —</div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 6px; color: #666; font-size: 0.9em;">方式二：从文件导入</label>
+                <input type="file" accept=".txt,.csv" onchange="loadFromFile(event)" style="padding: 8px; border: 1px dashed #ddd; border-radius: 8px; width: 100%; font-size: 0.9em;">
+                <p style="font-size: 0.8em; color: #999; margin-top: 4px;">支持 .txt 或 .csv 格式</p>
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="hideImportModal()">取消</button>
+                <button class="btn btn-primary" onclick="parseNames()">确认导入</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
